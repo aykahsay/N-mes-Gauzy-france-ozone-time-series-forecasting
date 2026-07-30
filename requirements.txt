@@ -1,0 +1,13 @@
+pandas>=2.0
+numpy>=2.0
+matplotlib>=3.9
+statsmodels>=0.14
+scikit-learn>=1.5
+xgboost>=2.0
+requests>=2.30
+jupyter
+nbformat
+nbclient
+streamlit>=1.30
+plotly>=5.20
+joblib>=1.3
