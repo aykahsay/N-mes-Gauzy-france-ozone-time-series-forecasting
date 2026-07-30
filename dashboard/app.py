@@ -134,12 +134,12 @@ with tab_overview:
                               fillcolor="red", opacity=0.12, line_width=0)
     fig.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Ozone (µg/m³)",
                        showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     st.caption("Shaded red bands mark days that fall inside a long (>14 day) sensor outage and were "
                "linearly interpolated — treat values there as synthetic, not measured.")
 
     st.subheader("Summary Statistics")
-    st.dataframe(daily.describe().to_frame("Ozone (µg/m³)").T, use_container_width=True)
+    st.dataframe(daily.describe().to_frame("Ozone (µg/m³)").T, width='stretch')
 
 # ---------------------------------------------------------------------------
 # Tab 2: Decomposition & Stationarity
@@ -155,7 +155,7 @@ with tab_decomp:
     fig.add_trace(go.Scatter(x=daily.index, y=stl_result.seasonal, mode="lines", line=dict(width=1, color="#3b8f6b")), row=3, col=1)
     fig.add_trace(go.Scatter(x=daily.index, y=stl_result.resid, mode="markers", marker=dict(size=3, color="#888")), row=4, col=1)
     fig.update_layout(height=650, showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     st.caption("Trend shows a mild increase over the observation window; seasonal confirms the expected "
                "summer-peak / winter-trough annual cycle; residual captures weather-driven day-to-day noise.")
 
@@ -168,7 +168,7 @@ with tab_decomp:
             return {"Series": label, "ADF stat": adf_stat, "ADF p-value": adf_p,
                     "KPSS stat": kpss_stat, "KPSS p-value": kpss_p}
         rows = [stationarity_row(daily, "Level"), stationarity_row(daily.diff(), "1st difference")]
-        st.dataframe(pd.DataFrame(rows).set_index("Series"), use_container_width=True)
+        st.dataframe(pd.DataFrame(rows).set_index("Series"), width='stretch')
         st.caption("ADF null = unit root (non-stationary); KPSS null = stationary. Both agree the level "
                    "series is already stationary.")
 
@@ -186,7 +186,7 @@ with tab_decomp:
             fig2.add_hline(y=conf, line_dash="dot", line_color="gray", row=1, col=col)
             fig2.add_hline(y=-conf, line_dash="dot", line_color="gray", row=1, col=col)
         fig2.update_layout(height=350, showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width='stretch')
 
 # ---------------------------------------------------------------------------
 # Tab 3: Model Comparison
@@ -199,11 +199,11 @@ with tab_models:
     with col_a:
         st.markdown("**Validation set**")
         val_df = pd.DataFrame(metrics["validation"]).T.loc[model_order].sort_values("RMSE")
-        st.dataframe(val_df.style.format("{:.2f}"), use_container_width=True)
+        st.dataframe(val_df.style.format("{:.2f}"), width='stretch')
     with col_b:
         st.markdown("**Test set**")
         test_df = pd.DataFrame(metrics["test"]).T.loc[model_order].sort_values("RMSE")
-        st.dataframe(test_df.style.format("{:.2f}"), use_container_width=True)
+        st.dataframe(test_df.style.format("{:.2f}"), width='stretch')
 
     metric_choice = st.radio("Metric", ["RMSE", "MAE", "MAPE (%)"], horizontal=True)
     bar_fig = go.Figure()
@@ -213,7 +213,7 @@ with tab_models:
                               marker_color="#e07b39"))
     bar_fig.update_layout(barmode="group", height=350, margin=dict(l=10, r=10, t=30, b=10),
                            yaxis_title=metric_choice)
-    st.plotly_chart(bar_fig, use_container_width=True)
+    st.plotly_chart(bar_fig, width='stretch')
 
     st.subheader("Forecasts vs. Actual (Validation + Test Period)")
     fig = go.Figure()
@@ -225,7 +225,7 @@ with tab_models:
     split_boundary = predictions.loc[predictions["split"] == "test", "Date"].min()
     fig.add_vline(x=split_boundary, line_dash="dash", line_color="gray")
     fig.update_layout(height=420, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Ozone (µg/m³)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
     st.caption("Dashed line marks the validation/test boundary. MAPE is unstable on validation because "
                "several winter days have near-zero actual ozone; MAE/RMSE are the more reliable metrics.")
 
@@ -268,7 +268,7 @@ with tab_forecast:
     fig.add_trace(go.Scatter(x=future_index, y=xgb_future.values, mode="lines",
                               name="XGBoost forecast", line=dict(color=MODEL_COLORS["XGBoost"])))
     fig.update_layout(height=450, margin=dict(l=10, r=10, t=10, b=10), yaxis_title="Ozone (µg/m³)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.caption(
         "These are genuine out-of-sample projections beyond the last observed date "
@@ -285,6 +285,6 @@ with tab_forecast:
         "SARIMA upper (80%)": sarima_upper.values,
         "XGBoost forecast": xgb_future.values,
     })
-    st.dataframe(forecast_table, use_container_width=True, hide_index=True)
+    st.dataframe(forecast_table, width='stretch', hide_index=True)
     st.download_button("Download forecast as CSV", forecast_table.to_csv(index=False),
                         file_name="ozone_forecast.csv", mime="text/csv")
