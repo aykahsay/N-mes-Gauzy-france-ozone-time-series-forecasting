@@ -1,7 +1,7 @@
 """
 Streamlit interactive dashboard for the Paris Ozone Forecasting Project.
 
-Features an interactive sidebar KPI panel, dynamic Plotly charts with filtering,
+Includes a dedicated KPIs & Summary Statistics page, interactive Plotly charts,
 and embedded original notebook figures (`paris-ozone-time-series-forecasting.ipynb`).
 """
 import json
@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
@@ -25,7 +26,7 @@ FIGURES_DIR = ROOT / "dashboard" / "figures"
 
 st.set_page_config(page_title="Paris Ozone Forecasting", page_icon="🌫️", layout="wide")
 
-# Custom styling for high readability and a clean KPI sidebar
+# Custom styling for high readability
 st.markdown(
     """
     <style>
@@ -39,8 +40,6 @@ st.markdown(
         margin-bottom: 10px;
         border-left: 4px solid #1f77b4;
     }
-    .kpi-title { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
-    .kpi-value { font-size: 1.5rem; font-weight: 700; color: #1f77b4; }
     .stCaption { font-size: 0.92rem !important; opacity: 0.9 !important; }
     h1 { font-size: 2.1rem !important; }
     h2, .stSubheader { font-size: 1.35rem !important; margin-top: 0.6rem; }
@@ -72,7 +71,7 @@ predictions = load_predictions()
 metrics = load_metrics()
 
 # ---------------------------------------------------------------------------
-# Sidebar: Navigation & KPI Panel
+# Sidebar: Navigation & Controls
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("## 🌫️ Paris Ozone Dashboard")
@@ -83,6 +82,7 @@ with st.sidebar:
     page = st.radio(
         "Page Selection",
         [
+            "KPIs & Summary Statistics",
             "Overview & Time Series",
             "Decomposition & Stationarity",
             "Model Diagnostics & Training",
@@ -93,42 +93,15 @@ with st.sidebar:
     )
     st.divider()
 
-    # KPI Summary Sidebar Panel
-    st.markdown("### 📊 Sidebar KPI Summary")
-    st.markdown("Global statistics across the observation window:")
-
-    col_s1, col_s2 = st.columns(2)
-    col_s1.metric("Mean Ozone", f"{daily.mean():.1f} µg/m³")
-    col_s2.metric("Max Ozone", f"{daily.max():.1f} µg/m³")
-
-    col_s3, col_s4 = st.columns(2)
-    col_s3.metric("Min Ozone", f"{daily.min():.1f} µg/m³")
-    col_s4.metric("Std Dev", f"{daily.std():.1f} µg/m³")
-
-    st.markdown("---")
-    st.markdown("**Model Performance KPIs**")
-    best_val_model = min(metrics["validation"], key=lambda k: metrics["validation"][k]["RMSE"])
-    best_test_model = min(metrics["test"], key=lambda k: metrics["test"][k]["RMSE"])
-
-    col_m1, col_m2 = st.columns(2)
-    col_m1.metric("Best Val Model", best_val_model, f"RMSE: {metrics['validation'][best_val_model]['RMSE']:.2f}")
-    col_m2.metric("Best Test Model", best_test_model, f"RMSE: {metrics['test'][best_test_model]['RMSE']:.2f}")
-
-    st.markdown("---")
-    st.markdown("**Dataset & Quality KPIs**")
-    st.caption(f"📅 **Date Range**: {daily.index.min().date()} → {daily.index.max().date()}")
-    st.caption(f"📆 **Total Observations**: {len(daily)} days")
-    st.caption(f"⚠️ **Long Sensor Outages**: {gap_mask.sum()} days ({gap_mask.mean():.1%})")
-
-    st.divider()
-    st.markdown("### ⚙️ Interactive Filter")
+    st.markdown("### ⚙️ Date Filter Window")
     date_filter = st.slider(
-        "Filter Date Window",
+        "Filter Date Range",
         min_value=daily.index.min().to_pydatetime(),
         max_value=daily.index.max().to_pydatetime(),
         value=(daily.index.min().to_pydatetime(), daily.index.max().to_pydatetime()),
         format="YYYY-MM",
     )
+    st.caption(f"📅 Selected: {date_filter[0].strftime('%Y-%m-%d')} → {date_filter[1].strftime('%Y-%m-%d')}")
 
 # Filter dataset according to sidebar slider
 filtered_daily = daily.loc[date_filter[0] : date_filter[1]]
@@ -137,14 +110,104 @@ filtered_gaps = gap_mask.loc[date_filter[0] : date_filter[1]]
 # Main Header
 st.title("Paris Ozone (O₃) Time Series Forecasting Dashboard")
 st.caption(
-    f"Interactive analysis of daily mean ground-level ozone in Paris ({daily.index.min().date()} to {daily.index.max().date()}). "
-    f"Toggle between interactive Plotly charts and original Jupyter Notebook figures."
+    f"Interactive analysis of daily mean ground-level ozone in Paris ({daily.index.min().date()} to {daily.index.max().date()})."
 )
 
 # ---------------------------------------------------------------------------
-# Page 1: Overview & Time Series
+# Dedicated Page 1: KPIs & Summary Statistics
 # ---------------------------------------------------------------------------
-if page == "Overview & Time Series":
+if page == "KPIs & Summary Statistics":
+    st.subheader("📊 Key Performance Indicators (KPIs)")
+
+    # Row 1: Time Series & Distribution KPIs
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1.metric("Mean Ozone", f"{filtered_daily.mean():.2f} µg/m³")
+    c2.metric("Median Ozone", f"{filtered_daily.median():.2f} µg/m³")
+    c3.metric("Max Concentration", f"{filtered_daily.max():.2f} µg/m³")
+    c4.metric("Min Concentration", f"{filtered_daily.min():.2f} µg/m³")
+    c5.metric("Std Deviation", f"{filtered_daily.std():.2f} µg/m³")
+    iqr_val = filtered_daily.quantile(0.75) - filtered_daily.quantile(0.25)
+    c6.metric("IQR", f"{iqr_val:.2f} µg/m³")
+
+    st.markdown("---")
+
+    # Row 2: Model Evaluation & Data Quality KPIs
+    best_val_model = min(metrics["validation"], key=lambda k: metrics["validation"][k]["RMSE"])
+    best_test_model = min(metrics["test"], key=lambda k: metrics["test"][k]["RMSE"])
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Best Val Model (RMSE)", f"{best_val_model}", f"RMSE: {metrics['validation'][best_val_model]['RMSE']:.2f}")
+    m2.metric("Best Test Model (RMSE)", f"{best_test_model}", f"RMSE: {metrics['test'][best_test_model]['RMSE']:.2f}")
+    m3.metric("Total Observation Days", f"{len(filtered_daily)} days")
+    m4.metric("Long Outage Gaps", f"{filtered_gaps.sum()} days", f"{filtered_gaps.mean():.1%} of data")
+
+    st.markdown("### 📈 Comprehensive Statistical Summary")
+    col_t1, col_t2 = st.columns([1, 1])
+
+    with col_t1:
+        st.markdown("#### Descriptors & Moments")
+        stats_series = filtered_daily.describe()
+        stats_series["variance"] = filtered_daily.var()
+        stats_series["skewness"] = filtered_daily.skew()
+        stats_series["kurtosis"] = filtered_daily.kurtosis()
+
+        stats_df = stats_series.to_frame("Ozone Value (µg/m³)")
+        st.dataframe(stats_df.style.format("{:.3f}"), use_container_width=True)
+
+        st.download_button(
+            "📥 Download Summary Stats CSV",
+            stats_df.to_csv(),
+            file_name="paris_ozone_summary_statistics.csv",
+            mime="text/csv",
+        )
+
+    with col_t2:
+        st.markdown("#### Monthly Aggregated Statistics")
+        monthly_df = filtered_daily.to_frame("Ozone")
+        monthly_df["Month"] = monthly_df.index.strftime("%Y-%m (%b)")
+        monthly_summary = (
+            monthly_df.groupby("Month")["Ozone"]
+            .agg(["mean", "std", "min", "max", "count"])
+            .rename(columns={"mean": "Mean", "std": "Std Dev", "min": "Min", "max": "Max", "count": "Days"})
+        )
+        st.dataframe(monthly_summary.style.format({"Mean": "{:.2f}", "Std Dev": "{:.2f}", "Min": "{:.2f}", "Max": "{:.2f}"}), use_container_width=True, height=340)
+
+    st.markdown("---")
+
+    # Distribution Visualizations
+    st.markdown("### 📉 Distribution & Seasonal Box Plot")
+    fig_col1, fig_col2 = st.columns(2)
+
+    with fig_col1:
+        st.markdown("#### Ozone Concentration Histogram & Density")
+        fig_hist = px.histogram(
+            filtered_daily,
+            x=filtered_daily.values,
+            nbins=40,
+            title="Distribution of Daily Mean Ozone",
+            labels={"x": "Ozone (µg/m³)"},
+            color_discrete_sequence=["#1f77b4"],
+            marginal="box",
+        )
+        fig_hist.update_layout(height=380, margin=dict(l=15, r=15, t=35, b=15))
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+    with fig_col2:
+        st.markdown("#### Monthly Seasonal Variation (Box Plot)")
+        df_box = filtered_daily.to_frame("Ozone")
+        df_box["Month"] = df_box.index.strftime("%b")
+        month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        df_box["Month"] = pd.Categorical(df_box["Month"], categories=month_order, ordered=True)
+        df_box = df_box.sort_values("Month")
+
+        fig_box = px.box(df_box, x="Month", y="Ozone", title="Monthly Ozone Distributions", color_discrete_sequence=["#ff7f0e"])
+        fig_box.update_layout(height=380, margin=dict(l=15, r=15, t=35, b=15), yaxis_title="Ozone (µg/m³)")
+        st.plotly_chart(fig_box, use_container_width=True)
+
+# ---------------------------------------------------------------------------
+# Page 2: Overview & Time Series
+# ---------------------------------------------------------------------------
+elif page == "Overview & Time Series":
     st.subheader("Selected Window Summary KPIs")
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Filtered Window Mean", f"{filtered_daily.mean():.1f} µg/m³")
@@ -207,11 +270,8 @@ if page == "Overview & Time Series":
                 st.image(str(img_raw), use_container_width=True)
                 st.caption("Figure from Notebook Cell 17: Raw hourly measurements and distribution.")
 
-    st.subheader("Statistical Distribution Summary")
-    st.dataframe(filtered_daily.describe().to_frame("Filtered Window Stats").T.style.format("{:.2f}"), use_container_width=True)
-
 # ---------------------------------------------------------------------------
-# Page 2: Decomposition & Stationarity
+# Page 3: Decomposition & Stationarity
 # ---------------------------------------------------------------------------
 elif page == "Decomposition & Stationarity":
     st.subheader("Seasonal-Trend Decomposition & Stationarity Tests")
@@ -285,7 +345,7 @@ elif page == "Decomposition & Stationarity":
             st.caption("Figure from Notebook Cell 30: Autocorrelation (ACF) & Partial Autocorrelation (PACF).")
 
 # ---------------------------------------------------------------------------
-# Page 3: Model Diagnostics & Training
+# Page 4: Model Diagnostics & Training
 # ---------------------------------------------------------------------------
 elif page == "Model Diagnostics & Training":
     st.subheader("Model Diagnostic & Feature Importance Plots")
@@ -315,7 +375,7 @@ elif page == "Model Diagnostics & Training":
             st.caption("Figure from Notebook Cell 51: XGBoost Validation Performance.")
 
 # ---------------------------------------------------------------------------
-# Page 4: Model Comparison
+# Page 5: Model Comparison
 # ---------------------------------------------------------------------------
 elif page == "Model Comparison":
     st.subheader("Model Performance & Evaluation Metrics")
@@ -361,7 +421,7 @@ elif page == "Model Comparison":
             st.caption("Figure from Notebook Cell 57: Comprehensive performance comparison plot from the paper.")
 
 # ---------------------------------------------------------------------------
-# Page 5: Forecast Explorer
+# Page 6: Forecast Explorer
 # ---------------------------------------------------------------------------
 elif page == "Forecast Explorer":
     st.subheader("Interactive Out-of-Sample Horizon Forecast Explorer")
