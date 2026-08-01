@@ -1,8 +1,8 @@
 """
 Streamlit interactive dashboard for the Paris Ozone Forecasting Project.
 
-Includes a dedicated KPIs & Summary Statistics page, interactive Plotly charts,
-and embedded original notebook figures (`paris-ozone-time-series-forecasting.ipynb`).
+Includes dedicated pages for Dataset KPIs & Summary Statistics, Time Series Overview,
+Decomposition & Stationarity, Model Diagnostics, Model Comparison, and Forecast Explorer.
 """
 import json
 import sys
@@ -114,12 +114,12 @@ st.caption(
 )
 
 # ---------------------------------------------------------------------------
-# Dedicated Page 1: KPIs & Summary Statistics
+# Dedicated Page 1: KPIs & Summary Statistics (Dataset Focus)
 # ---------------------------------------------------------------------------
 if page == "KPIs & Summary Statistics":
-    st.subheader("📊 Key Performance Indicators (KPIs)")
+    st.subheader("📊 Dataset Key Performance Indicators (KPIs)")
 
-    # Row 1: Time Series & Distribution KPIs
+    # Row 1: Summary Statistics KPIs
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Mean Ozone", f"{filtered_daily.mean():.2f} µg/m³")
     c2.metric("Median Ozone", f"{filtered_daily.median():.2f} µg/m³")
@@ -131,21 +131,18 @@ if page == "KPIs & Summary Statistics":
 
     st.markdown("---")
 
-    # Row 2: Model Evaluation & Data Quality KPIs
-    best_val_model = min(metrics["validation"], key=lambda k: metrics["validation"][k]["RMSE"])
-    best_test_model = min(metrics["test"], key=lambda k: metrics["test"][k]["RMSE"])
-
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Best Val Model (RMSE)", f"{best_val_model}", f"RMSE: {metrics['validation'][best_val_model]['RMSE']:.2f}")
-    m2.metric("Best Test Model (RMSE)", f"{best_test_model}", f"RMSE: {metrics['test'][best_test_model]['RMSE']:.2f}")
-    m3.metric("Total Observation Days", f"{len(filtered_daily)} days")
-    m4.metric("Long Outage Gaps", f"{filtered_gaps.sum()} days", f"{filtered_gaps.mean():.1%} of data")
+    # Row 2: Data Quality & Observations KPIs
+    q1, q2, q3, q4 = st.columns(4)
+    q1.metric("Total Observation Days", f"{len(filtered_daily)} days")
+    q2.metric("Interpolated Outage Days", f"{filtered_gaps.sum()} days")
+    q3.metric("Data Gap Percentage", f"{filtered_gaps.mean():.1%}")
+    q4.metric("Variance", f"{filtered_daily.var():.2f}")
 
     st.markdown("### 📈 Comprehensive Statistical Summary")
     col_t1, col_t2 = st.columns([1, 1])
 
     with col_t1:
-        st.markdown("#### Descriptors & Moments")
+        st.markdown("#### Descriptors & Statistical Moments")
         stats_series = filtered_daily.describe()
         stats_series["variance"] = filtered_daily.var()
         stats_series["skewness"] = filtered_daily.skew()
@@ -375,10 +372,22 @@ elif page == "Model Diagnostics & Training":
             st.caption("Figure from Notebook Cell 51: XGBoost Validation Performance.")
 
 # ---------------------------------------------------------------------------
-# Page 5: Model Comparison
+# Page 5: Model Comparison (Model Performance KPIs Featured Here)
 # ---------------------------------------------------------------------------
 elif page == "Model Comparison":
-    st.subheader("Model Performance & Evaluation Metrics")
+    st.subheader("🏆 Model Performance KPIs & Comparative Evaluation")
+
+    best_val_model = min(metrics["validation"], key=lambda k: metrics["validation"][k]["RMSE"])
+    best_test_model = min(metrics["test"], key=lambda k: metrics["test"][k]["RMSE"])
+
+    # Model Performance KPIs Banner
+    kpi_m1, kpi_m2, kpi_m3, kpi_m4 = st.columns(4)
+    kpi_m1.metric("Best Val Model", best_val_model, f"RMSE: {metrics['validation'][best_val_model]['RMSE']:.2f}")
+    kpi_m2.metric("Best Test Model", best_test_model, f"RMSE: {metrics['test'][best_test_model]['RMSE']:.2f}")
+    kpi_m3.metric("Best Test MAE", f"{metrics['test'][best_test_model]['MAE']:.2f} µg/m³")
+    kpi_m4.metric("Best Test MAPE", f"{metrics['test'][best_test_model]['MAPE (%)']:.2f}%")
+
+    st.markdown("---")
 
     tab_c1, tab_c2 = st.tabs(["📊 Interactive Metrics Comparison", "📓 Notebook Evaluation Summary Plot"])
 
@@ -387,12 +396,12 @@ elif page == "Model Comparison":
 
         col_v, col_t = st.columns(2)
         with col_v:
-            st.markdown("#### Validation Set Evaluation")
+            st.markdown("#### Validation Set Performance Table")
             val_df = pd.DataFrame(metrics["validation"]).T.loc[model_order].sort_values("RMSE")
             st.dataframe(val_df.style.format("{:.2f}"), use_container_width=True)
 
         with col_t:
-            st.markdown("#### Test Set Evaluation")
+            st.markdown("#### Test Set Performance Table")
             test_df = pd.DataFrame(metrics["test"]).T.loc[model_order].sort_values("RMSE")
             st.dataframe(test_df.style.format("{:.2f}"), use_container_width=True)
 
