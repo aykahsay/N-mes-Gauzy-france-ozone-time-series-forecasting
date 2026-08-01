@@ -138,6 +138,38 @@ if page == "KPIs & Summary Statistics":
     q3.metric("Data Gap Percentage", f"{filtered_gaps.mean():.1%}")
     q4.metric("Variance", f"{filtered_daily.var():.2f}")
 
+    # Distribution Visualizations
+    st.markdown("### 📉 Distribution & Seasonal Box Plot")
+    fig_col1, fig_col2 = st.columns(2)
+
+    with fig_col1:
+        st.markdown("#### Ozone Concentration Histogram & Density")
+        fig_hist = px.histogram(
+            filtered_daily,
+            x=filtered_daily.values,
+            nbins=40,
+            title="Distribution of Daily Mean Ozone",
+            labels={"x": "Ozone (µg/m³)"},
+            color_discrete_sequence=["#1f77b4"],
+            marginal="box",
+        )
+        fig_hist.update_layout(height=380, margin=dict(l=15, r=15, t=35, b=15))
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+    with fig_col2:
+        st.markdown("#### Monthly Seasonal Variation (Box Plot)")
+        df_box = filtered_daily.to_frame("Ozone")
+        df_box["Month"] = df_box.index.strftime("%b")
+        month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        df_box["Month"] = pd.Categorical(df_box["Month"], categories=month_order, ordered=True)
+        df_box = df_box.sort_values("Month")
+
+        fig_box = px.box(df_box, x="Month", y="Ozone", title="Monthly Ozone Distributions", color_discrete_sequence=["#ff7f0e"])
+        fig_box.update_layout(height=380, margin=dict(l=15, r=15, t=35, b=15), yaxis_title="Ozone (µg/m³)")
+        st.plotly_chart(fig_box, use_container_width=True)
+
+    st.markdown("---")
+
     st.markdown("### 📈 Comprehensive Statistical Summary")
     col_t1, col_t2 = st.columns([1, 1])
 
@@ -168,38 +200,6 @@ if page == "KPIs & Summary Statistics":
             .rename(columns={"mean": "Mean", "std": "Std Dev", "min": "Min", "max": "Max", "count": "Days"})
         )
         st.dataframe(monthly_summary.style.format({"Mean": "{:.2f}", "Std Dev": "{:.2f}", "Min": "{:.2f}", "Max": "{:.2f}"}), use_container_width=True, height=340)
-
-    st.markdown("---")
-
-    # Distribution Visualizations
-    st.markdown("### 📉 Distribution & Seasonal Box Plot")
-    fig_col1, fig_col2 = st.columns(2)
-
-    with fig_col1:
-        st.markdown("#### Ozone Concentration Histogram & Density")
-        fig_hist = px.histogram(
-            filtered_daily,
-            x=filtered_daily.values,
-            nbins=40,
-            title="Distribution of Daily Mean Ozone",
-            labels={"x": "Ozone (µg/m³)"},
-            color_discrete_sequence=["#1f77b4"],
-            marginal="box",
-        )
-        fig_hist.update_layout(height=380, margin=dict(l=15, r=15, t=35, b=15))
-        st.plotly_chart(fig_hist, use_container_width=True)
-
-    with fig_col2:
-        st.markdown("#### Monthly Seasonal Variation (Box Plot)")
-        df_box = filtered_daily.to_frame("Ozone")
-        df_box["Month"] = df_box.index.strftime("%b")
-        month_order = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        df_box["Month"] = pd.Categorical(df_box["Month"], categories=month_order, ordered=True)
-        df_box = df_box.sort_values("Month")
-
-        fig_box = px.box(df_box, x="Month", y="Ozone", title="Monthly Ozone Distributions", color_discrete_sequence=["#ff7f0e"])
-        fig_box.update_layout(height=380, margin=dict(l=15, r=15, t=35, b=15), yaxis_title="Ozone (µg/m³)")
-        st.plotly_chart(fig_box, use_container_width=True)
 
 # ---------------------------------------------------------------------------
 # Page 2: Overview & Time Series
