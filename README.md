@@ -75,10 +75,15 @@ Models were evaluated across validation and out-of-sample test splits using Mean
 
 The project includes an interactive web interface built with **Streamlit** and **Plotly**.
 
+### 🌐 Live Dashboard Access:
+- **Local URL**: [http://localhost:8501](http://localhost:8501)
+- **Network URL**: `http://10.66.39.237:8501`
+
 ### Key Features:
-1. **📈 Data & Stationarity Analysis**: Interactive time series plot, STL trend/seasonal decomposition, ACF/PACF plots, and automated ADF/KPSS test results.
-2. **⚖️ Model Performance Benchmark**: Side-by-side metric tables (MAE, RMSE, MAPE) and dynamic forecast overlays for Train, Validation, and Test splits.
-3. **🔮 Out-of-Sample Forecasting**: Interactive 1 to 90-day future forecasting tool with user-defined temperature/humidity delta sliders for scenario simulation.
+1. **📊 Dedicated KPIs & Summary Statistics**: Displays full descriptive moments (Mean, Median, Std Dev, Variance, Skewness, Kurtosis), missing data gap rates, monthly aggregation tables, interactive distribution histograms, and monthly seasonal boxplots.
+2. **📈 Time Series Overview & Stationarity**: Interactive time series plot, STL trend/seasonal decomposition, ACF/PACF plots, and automated ADF/KPSS test results.
+3. **🏆 Model Performance Benchmark**: Featured model performance KPI cards (Best Validation & Test Models), side-by-side metric tables (MAE, RMSE, MAPE), and dynamic forecast overlays.
+4. **🔮 Champion Model Out-of-Sample Forecasting**: Interactive 7 to 90-day future forecasting tool driven by the top-performing **SARIMA** model with dynamic prediction interval selection and CSV exports.
 
 ---
 
