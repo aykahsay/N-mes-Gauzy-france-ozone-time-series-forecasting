@@ -430,24 +430,32 @@ elif page == "Model Comparison":
             st.caption("Figure from Notebook Cell 57: Comprehensive performance comparison plot from the paper.")
 
 # ---------------------------------------------------------------------------
-# Page 6: Forecast Explorer
+# Page 6: Forecast Explorer (Best Performing Model Only)
 # ---------------------------------------------------------------------------
 elif page == "Forecast Explorer":
     st.subheader("Interactive Out-of-Sample Horizon Forecast Explorer")
-    st.caption("Generate dynamic forward projections beyond observed history using refit SARIMA & XGBoost models.")
+
+    # Determine best model dynamically based on lowest Test RMSE
+    best_test_model = min(metrics["test"], key=lambda k: metrics["test"][k]["RMSE"])
+    best_rmse = metrics["test"][best_test_model]["RMSE"]
+    best_mae = metrics["test"][best_test_model]["MAE"]
+    best_mape = metrics["test"][best_test_model]["MAPE (%)"]
+
+    st.success(
+        f"🏆 **Champion Model Selected**: **{best_test_model}** (Evaluated as the best model with lowest Test RMSE = **{best_rmse:.2f}**, MAE = **{best_mae:.2f}** µg/m³, MAPE = **{best_mape:.2f}%**)"
+    )
 
     col_h1, col_h2 = st.columns([2, 1])
     with col_h1:
         horizon = st.slider("Select Forecast Horizon (Days Ahead)", min_value=7, max_value=90, value=30, step=1)
     with col_h2:
-        confidence = st.selectbox("SARIMA Confidence Interval", [80, 90, 95], index=0)
+        confidence = st.selectbox(f"{best_test_model} Prediction Interval", [80, 90, 95], index=0)
 
     future_index = pd.date_range(daily.index.max() + pd.Timedelta(days=1), periods=horizon, freq="D")
     alpha_val = 1 - (confidence / 100.0)
 
-    with st.spinner("Refitting and computing out-of-sample projections..."):
+    with st.spinner(f"Refitting champion model ({best_test_model}) and projecting future horizon..."):
         from statsmodels.tsa.statespace.sarimax import SARIMAXResults
-        from xgboost import XGBRegressor
 
         sarima_deploy = SARIMAXResults.load(str(MODELS_DIR / "sarima_deploy.pickle"))
         exog_future = fourier_terms(pd.DatetimeIndex(list(daily.index) + list(future_index))).loc[future_index]
@@ -456,14 +464,6 @@ elif page == "Forecast Explorer":
         ci = sarima_future.conf_int(alpha=alpha_val)
         sarima_lower = pd.Series(ci.iloc[:, 0].values, index=future_index)
         sarima_upper = pd.Series(ci.iloc[:, 1].values, index=future_index)
-
-        with open(MODELS_DIR / "xgb_best_iteration.json") as f:
-            best_iter = json.load(f)["best_iteration"]
-        xgb_deploy = XGBRegressor(
-            n_estimators=best_iter, max_depth=3, learning_rate=0.05, subsample=0.8, colsample_bytree=0.8, random_state=42
-        )
-        xgb_deploy.load_model(str(MODELS_DIR / "xgb_deploy.json"))
-        xgb_future = recursive_forecast(xgb_deploy, daily, future_index)
 
     fig_fc = go.Figure()
     recent = daily.iloc[-90:]
@@ -477,25 +477,47 @@ elif page == "Forecast Explorer":
             fill="tonexty",
             fillcolor="rgba(255, 127, 14, 0.22)",
             line=dict(width=0),
-            name=f"SARIMA {confidence}% Interval",
+            name=f"{best_test_model} {confidence}% Interval",
             hoverinfo="skip",
         )
     )
-    fig_fc.add_trace(go.Scatter(x=future_index, y=sarima_future_mean.values, mode="lines", name="SARIMA Forecast", line=dict(color="#ff7f0e", width=2.2)))
-    fig_fc.add_trace(go.Scatter(x=future_index, y=xgb_future.values, mode="lines", name="XGBoost Forecast", line=dict(color="#2ca02c", width=2.2)))
-    fig_fc.update_layout(height=460, margin=dict(l=15, r=15, t=15, b=15), yaxis_title="Ozone Concentration (µg/m³)")
+    fig_fc.add_trace(
+        go.Scatter(
+            x=future_index,
+            y=sarima_future_mean.values,
+            mode="lines",
+            name=f"{best_test_model} Forecast (Champion)",
+            line=dict(color="#ff7f0e", width=2.5),
+        )
+    )
+    fig_fc.update_layout(height=460, margin=dict(l=15, r=15, t=20, b=15), yaxis_title="Ozone Concentration (µg/m³)")
     st.plotly_chart(fig_fc, use_container_width=True)
+
+    st.caption(
+        f"Out-of-sample projections up to {horizon} days beyond the observed period ({daily.index.max().date()}). "
+        f"Generated using the top-performing {best_test_model} model."
+    )
 
     forecast_table = pd.DataFrame(
         {
             "Date": future_index.date,
-            "SARIMA Forecast": sarima_future_mean.values,
-            f"SARIMA Lower ({confidence}%)": sarima_lower.values,
-            f"SARIMA Upper ({confidence}%)": sarima_upper.values,
-            "XGBoost Forecast": xgb_future.values,
+            f"{best_test_model} Forecast": sarima_future_mean.values,
+            f"Lower ({confidence}%)": sarima_lower.values,
+            f"Upper ({confidence}%)": sarima_upper.values,
         }
     )
 
     st.markdown("#### Detailed Forecast Data Table")
-    st.dataframe(forecast_table.style.format({"SARIMA Forecast": "{:.2f}", f"SARIMA Lower ({confidence}%)": "{:.2f}", f"SARIMA Upper ({confidence}%)": "{:.2f}", "XGBoost Forecast": "{:.2f}"}), use_container_width=True, hide_index=True)
-    st.download_button("📥 Download Forecast CSV", forecast_table.to_csv(index=False), file_name=f"paris_ozone_forecast_{horizon}d.csv", mime="text/csv")
+    st.dataframe(
+        forecast_table.style.format(
+            {f"{best_test_model} Forecast": "{:.2f}", f"Lower ({confidence}%)": "{:.2f}", f"Upper ({confidence}%)": "{:.2f}"}
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+    st.download_button(
+        "📥 Download Forecast CSV",
+        forecast_table.to_csv(index=False),
+        file_name=f"paris_ozone_{best_test_model.lower()}_forecast_{horizon}d.csv",
+        mime="text/csv",
+    )
