@@ -1,5 +1,5 @@
 """
-Streamlit interactive dashboard for the Paris Ozone Forecasting Project.
+Streamlit interactive dashboard for the Nîmes Ozone Forecasting Project.
 
 Includes dedicated pages for Dataset KPIs & Summary Statistics, Time Series Overview,
 Decomposition & Stationarity, Model Diagnostics, Model Comparison, and Forecast Explorer.
@@ -24,7 +24,7 @@ PROCESSED_DIR = ROOT / "data" / "processed"
 MODELS_DIR = ROOT / "models"
 FIGURES_DIR = ROOT / "dashboard" / "figures"
 
-st.set_page_config(page_title="Paris Ozone Forecasting", page_icon="🌫️", layout="wide")
+st.set_page_config(page_title="Nîmes Ozone Forecasting", page_icon="🌫️", layout="wide")
 
 # Custom styling for high readability
 st.markdown(
@@ -74,7 +74,7 @@ metrics = load_metrics()
 # Sidebar: Navigation & Controls
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("## 🌫️ Paris Ozone Dashboard")
+    st.markdown("## 🌫️ Nîmes Ozone Dashboard")
     st.caption("STA4030 Time Series Term Paper")
     st.divider()
 
@@ -108,9 +108,9 @@ filtered_daily = daily.loc[date_filter[0] : date_filter[1]]
 filtered_gaps = gap_mask.loc[date_filter[0] : date_filter[1]]
 
 # Main Header
-st.title("Paris Ozone (O₃) Time Series Forecasting Dashboard")
+st.title("Nîmes Ozone (O₃) Time Series Forecasting Dashboard")
 st.caption(
-    f"Interactive analysis of daily mean ground-level ozone in Paris ({daily.index.min().date()} to {daily.index.max().date()})."
+    f"Interactive analysis of daily mean ground-level ozone in Nîmes ({daily.index.min().date()} to {daily.index.max().date()})."
 )
 
 # ---------------------------------------------------------------------------
@@ -186,7 +186,7 @@ if page == "KPIs & Summary Statistics":
         st.download_button(
             "📥 Download Summary Stats CSV",
             stats_df.to_csv(),
-            file_name="paris_ozone_summary_statistics.csv",
+            file_name="nimes_ozone_summary_statistics.csv",
             mime="text/csv",
         )
 
@@ -518,6 +518,6 @@ elif page == "Forecast Explorer":
     st.download_button(
         "📥 Download Forecast CSV",
         forecast_table.to_csv(index=False),
-        file_name=f"paris_ozone_{best_test_model.lower()}_forecast_{horizon}d.csv",
+        file_name=f"nimes_ozone_{best_test_model.lower()}_forecast_{horizon}d.csv",
         mime="text/csv",
     )

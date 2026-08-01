@@ -25,7 +25,7 @@ from src.data import clean_daily, chronological_split
 from src.features import fourier_terms, build_features, FEATURE_COLS, recursive_forecast
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV_PATH = ROOT / "ozone_df.csv"
+CSV_PATH = ROOT / "LesHautsdeNîmes_ozone_df.csv"
 PROCESSED_DIR = ROOT / "data" / "processed"
 MODELS_DIR = ROOT / "models"
 

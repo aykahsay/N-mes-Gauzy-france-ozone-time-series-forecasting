@@ -1,5 +1,5 @@
 ---
-title: "Paris Ground-Level Ozone ($O_3$) Time Series Analysis and Forecasting"
+title: "Nîmes Ground-Level Ozone ($O_3$) Time Series Analysis and Forecasting"
 subtitle: "STA4030 Time Series Analysis & Forecasting — Term Paper"
 author: "Group 03"
 date: "`r Sys.Date()`"
@@ -41,7 +41,7 @@ library(plotly)
 
 Ground-level ozone ($O_3$) is a potent secondary air pollutant formed through photochemical reactions involving nitrogen oxides ($NO_x$) and volatile organic compounds ($VOCs$) in the presence of solar radiation. Accurately forecasting daily mean ozone concentration is essential for urban environmental health monitoring, pollution warning systems, and municipal air quality policy design.
 
-This study analyzes daily ground-level ozone concentration data collected in Paris, France (May 2018 through March 2023, spanning 1,779 calendar days). Using rigorous time-series methodology, we perform data preprocessing, missing data interpolation, STL seasonal-trend decomposition, stationarity hypothesis testing, statistical SARIMA modeling, machine learning (XGBoost) benchmark comparisons, and multi-step out-of-sample forecasting.
+This study analyzes daily ground-level ozone concentration data collected in Nîmes, France (Les Hauts de Nîmes). Using rigorous time-series methodology, we perform data preprocessing, missing data interpolation, STL seasonal-trend decomposition, stationarity hypothesis testing, statistical SARIMA modeling, machine learning (XGBoost) benchmark comparisons, and multi-step out-of-sample forecasting.
 
 ---
 
@@ -53,7 +53,7 @@ The primary dataset consists of hourly OpenAQ ground-level ozone measurements ag
 # Read preprocessed daily dataset
 data_path <- "data/processed/daily.csv"
 if (!file.exists(data_path)) {
-  data_path <- "ozone_df.csv"
+  data_path <- "LesHautsdeNîmes_ozone_df.csv"
 }
 
 daily_df <- read_csv(data_path) %>%
@@ -108,7 +108,7 @@ ggplot(daily_df, aes(x = Date, y = Ozone)) +
   geom_smooth(method = "loess", color = "#d62728", se = FALSE, size = 1) +
   theme_minimal(base_size = 13) +
   labs(
-    title = "Daily Mean Ground-Level Ozone Concentration (Paris)",
+    title = "Daily Mean Ground-Level Ozone Concentration (Nîmes)",
     subtitle = "May 2018 – March 2023 (Red line indicates LOESS trend)",
     x = "Date",
     y = "Ozone Concentration (µg/m³)"
@@ -128,7 +128,7 @@ ggplot(daily_df, aes(x = Month, y = Ozone, fill = Month)) +
   theme_minimal(base_size = 13) +
   scale_fill_viridis_d(option = "plasma") +
   labs(
-    title = "Monthly Seasonal Distribution of Paris Ozone Levels",
+    title = "Monthly Seasonal Distribution of Nîmes Ozone Levels",
     x = "Month",
     y = "Ozone Concentration (µg/m³)"
   )
@@ -147,7 +147,7 @@ $$y_t = T_t + S_t + R_t$$
 ```{r stl-decomposition}
 ts_ozone <- ts(daily_df$Ozone, frequency = 365, start = c(2018, 138))
 stl_fit <- stl(ts_ozone, s.window = "periodic", robust = TRUE)
-plot(stl_fit, col = "#1f77b4", main = "STL Decomposition of Daily Paris Ozone (Period = 365)")
+plot(stl_fit, col = "#1f77b4", main = "STL Decomposition of Daily Nîmes Ozone (Period = 365)")
 ```
 
 ## 4.2 Stationarity Hypothesis Testing
@@ -228,6 +228,6 @@ plot(sarima_fc, main = "SARIMA 30-Day Out-of-Sample Forecast",
 
 # 7. Conclusions & Recommendations
 
-1. **Strong Annual Seasonality**: Paris ground-level ozone exhibits deterministic summer elevation driven by temperature and solar radiation, requiring seasonal modeling components.
+1. **Strong Annual Seasonality**: Nîmes ground-level ozone exhibits deterministic summer elevation driven by temperature and solar radiation, requiring seasonal modeling components.
 2. **SARIMA Superiority**: Statistical SARIMA incorporating harmonic Fourier terms proved superior to tree-based recursive XGBoost, achieving a Test RMSE of **13.56 $\mu g/m^3$**.
 3. **Environmental Takeaway**: Municipal air quality management agencies can utilize this 30-day forecasting framework to issue early public health warnings during high-ozone summer windows.

@@ -1,15 +1,15 @@
-# 🌍 Paris Ground-Level Ozone ($O_3$) Time Series Forecasting
+# 🌍 Nîmes Ground-Level Ozone ($O_3$) Time Series Forecasting
 
-> **Time Series Analysis and Forecasting of Ground-Level Ozone ($O_3$) Concentrations in Paris Using Statistical and Machine Learning Models with an Interactive Streamlit Dashboard.**
+> **Time Series Analysis and Forecasting of Ground-Level Ozone ($O_3$) Concentrations in Nîmes (Les Hauts de Nîmes), France Using Statistical and Machine Learning Models with an Interactive Streamlit Dashboard.**
 
 ---
 
 ## 📌 Project Overview
 
-Ground-level ozone ($O_3$) is a major atmospheric pollutant affecting public health and environmental quality. This project delivers an end-to-end time series analysis and forecasting framework for daily mean ozone levels in Paris. 
+Ground-level ozone ($O_3$) is a major atmospheric pollutant affecting public health and environmental quality. This project delivers an end-to-end time series analysis and forecasting framework for daily mean ozone levels in Nîmes, France. 
 
 Key workflow components:
-- **Data Acquisition & Preprocessing**: Ingested hourly OpenAQ sensor measurements for Paris, handled missing observations, and aggregated readings into a continuous daily mean time series.
+- **Data Acquisition & Preprocessing**: Ingested hourly OpenAQ sensor measurements for Les Hauts de Nîmes, handled missing observations, and aggregated readings into a continuous daily mean time series.
 - **Exploratory Data Analysis & Stationarity Testing**: Evaluated seasonal patterns, autocorrelation (ACF/PACF), STL decomposition, and unit root tests (ADF and KPSS).
 - **Forecasting Models**: Benchmark comparison between baseline models (Naive, 7-day Seasonal Naive), Statistical SARIMA models, and Gradient-Boosted Decision Trees (XGBoost) with engineered calendar, Fourier, and lag features.
 - **Interactive Web App**: A multi-tab Streamlit dashboard providing dynamic visualizations, metric comparisons, and out-of-sample forecast simulations under custom scenarios.
@@ -25,16 +25,15 @@ paris-ozone-time-series-forecasting/
 │   └── app.py                     # Streamlit dashboard application
 │
 ├── data/
-│   ├── processed/                 # Cleaned and processed daily datasets
-│   │   ├── daily.csv
-│   │   └── predictions.csv
-│   └── raw/
+│   └── processed/                 # Cleaned and processed daily datasets
+│       ├── daily.csv
+│       └── predictions.csv
 │
 ├── models/                        # Serialized models and evaluation artifacts
 │   ├── metrics.json               # Validation and Test performance metrics
 │   ├── sarima_deploy.pickle       # Trained SARIMA model checkpoint
-│   ├── sarima_order.json          # SARIMA model orders: (0,0,0)x(1,0,1,7)
-│   ├── xgb_best_iteration.json    # Optimal boosting iterations for XGBoost
+│   ├── sarima_order.json          # SARIMA model orders: (2,1,0)x(1,0,1,7)
+│   ├── xgb_best_iteration.json    # Optimal boosting iterations for XGBoost (71)
 │   └── xgb_deploy.json            # Serialized XGBoost model weights
 │
 ├── src/                           # Modular Python source package
@@ -43,10 +42,10 @@ paris-ozone-time-series-forecasting/
 │   ├── features.py                # Feature engineering (lags, rolling stats, Fourier terms)
 │   └── train.py                   # Model training and artifact export pipeline
 │
-├── notebooks/                     # Exploratory notebooks and analyses
-│   └── paris-ozone-time-series-forecasting.ipynb
-│
-├── ozone_df.csv                   # Raw extracted OpenAQ dataset
+├── LesHautsdeNîmes_ozone_df.csv   # Raw extracted OpenAQ dataset for Nîmes
+├── STA4030 Term Paper _group_work.pdf # Final group term paper PDF report
+├── nimes_ozone_time_series_forecasting.ipynb # Jupyter analysis & forecasting notebook
+├── script.Rmd                     # R Markdown project script
 ├── requirements.txt               # Python package dependencies
 ├── .gitignore                     # Git ignore file
 └── README.md                      # Project documentation
@@ -62,10 +61,10 @@ Models were evaluated across validation and out-of-sample test splits using Mean
 
 | Model | MAE ($\mu g/m^3$) | RMSE ($\mu g/m^3$) | MAPE (%) |
 | :--- | :---: | :---: | :---: |
-| 🥇 **SARIMA $(0,0,0) \times (1,0,1)_7$** | **14.38** | **17.57** | **29.47%** |
-| 🥈 **XGBoost (with Lags & Fourier)** | 19.35 | 23.79 | 31.74% |
-| 🥉 **Naive Baseline** | 29.32 | 33.62 | 46.62% |
-| 4️⃣ **Seasonal Naive (7-Day)** | 38.93 | 43.33 | 62.63% |
+| 🥇 **SARIMA $(2,1,0) \times (1,0,1)_7$** | **20.89** | **24.63** | **26.36%** |
+| 🥈 **XGBoost (with Lags & Fourier)** | 35.76 | 40.58 | 44.14% |
+| 🥉 **Seasonal Naive (7-Day)** | 37.35 | 43.21 | 46.81% |
+| 4️⃣ **Naive Baseline** | 51.97 | 55.73 | 65.80% |
 
 *SARIMA demonstrated superior generalization on unseen test data, capturing weekly seasonality and autoregressive decay patterns effectively.*
 
@@ -77,7 +76,6 @@ The project includes an interactive web interface built with **Streamlit** and *
 
 ### 🌐 Live Dashboard Access:
 - **Local URL**: [http://localhost:8501](http://localhost:8501)
-- **Network URL**: `http://10.66.39.237:8501`
 
 ### Key Features:
 1. **📊 Dedicated KPIs & Summary Statistics**: Displays full descriptive moments (Mean, Median, Std Dev, Variance, Skewness, Kurtosis), missing data gap rates, monthly aggregation tables, interactive distribution histograms, and monthly seasonal boxplots.
