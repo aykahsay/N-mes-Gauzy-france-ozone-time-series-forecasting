@@ -33,35 +33,33 @@ MODELS_DIR = ROOT / "models"
 st.set_page_config(page_title="Paris Ozone Forecasting", page_icon="🌫️", layout="wide")
 
 MODEL_COLORS = {
-    "Actual": "#1a1a1a",
-    "Naive": "#9e9e9e",
-    "Seasonal Naive (7d)": "#c2a83e",
-    "SARIMA": "#e0672b",
-    "XGBoost": "#2f8f5e",
+    "Actual": "#1f77b4",  # Bright, high-contrast blue visible on both dark & light backgrounds
+    "Naive": "#7f7f7f",
+    "Seasonal Naive (7d)": "#bcbd22",
+    "SARIMA": "#ff7f0e",  # Vibrant orange
+    "XGBoost": "#2ca02c",  # Vibrant green
 }
 
 BASE_FONT_SIZE = 15
-CHART_FONT = dict(family="Inter, Segoe UI, sans-serif", size=13, color="#31333F")
+CHART_FONT = dict(family="Inter, Segoe UI, sans-serif", size=13)
 
 # ---------------------------------------------------------------------------
 # Visibility: larger base text, bigger metric tiles, higher-contrast captions,
-# a slightly wider sidebar. Uses Streamlit's own CSS variables where possible
-# so it still adapts if the viewer is on a dark theme.
+# a slightly wider sidebar.
 # ---------------------------------------------------------------------------
 st.markdown(
-    f"""
+    """
     <style>
-    html, body, [class*="st-emotion-cache"] {{ font-size: {BASE_FONT_SIZE}px; }}
-    section[data-testid="stSidebar"] {{ min-width: 300px; }}
-    [data-testid="stMetricValue"] {{ font-size: 1.9rem; font-weight: 700; }}
-    [data-testid="stMetricLabel"] {{ font-size: 0.95rem; opacity: 0.85; }}
-    [data-testid="stCaptionContainer"] p, .stCaption {{
+    section[data-testid="stSidebar"] { min-width: 300px; }
+    [data-testid="stMetricValue"] { font-size: 1.9rem; font-weight: 700; }
+    [data-testid="stMetricLabel"] { font-size: 0.95rem; opacity: 0.85; }
+    [data-testid="stCaptionContainer"] p, .stCaption {
         font-size: 0.95rem !important;
         opacity: 0.95 !important;
-    }}
-    h1 {{ font-size: 2.1rem !important; }}
-    h2, .stSubheader {{ font-size: 1.4rem !important; margin-top: 0.6rem; }}
-    section[data-testid="stSidebar"] .stRadio label p {{ font-size: 1.05rem; }}
+    }
+    h1 { font-size: 2.1rem !important; }
+    h2, .stSubheader { font-size: 1.4rem !important; margin-top: 0.6rem; }
+    section[data-testid="stSidebar"] .stRadio label p { font-size: 1.05rem; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -69,19 +67,19 @@ st.markdown(
 
 
 def style_fig(fig, height=420, showlegend=True):
-    """Apply a consistent, higher-contrast look to every Plotly chart."""
+    """Apply a consistent, high-contrast look to every Plotly chart."""
     fig.update_layout(
         height=height,
         showlegend=showlegend,
-        margin=dict(l=10, r=10, t=40 if fig.layout.title.text else 10, b=10),
+        margin=dict(l=15, r=15, t=40 if fig.layout.title.text else 15, b=15),
         font=CHART_FONT,
-        legend=dict(font=dict(size=13), orientation="h", yanchor="bottom", y=1.02, x=0),
+        legend=dict(font=dict(size=12), orientation="h", yanchor="bottom", y=1.02, x=0),
         hoverlabel=dict(font_size=13),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,0.2)", tickfont=dict(size=12))
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.2)", tickfont=dict(size=12),
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,0.25)", tickfont=dict(size=12))
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,0.25)", tickfont=dict(size=12),
                       title_font=dict(size=13))
     return fig
 
@@ -196,7 +194,7 @@ if page == "Overview":
                               fillcolor="red", opacity=0.15, line_width=0)
     style_fig(fig, showlegend=False)
     fig.update_layout(yaxis_title="Ozone (µg/m³)")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     st.caption("Shaded red bands mark days that fall inside a long (>14 day) sensor outage and were "
                "linearly interpolated — treat values there as synthetic, not measured.")
 
@@ -221,7 +219,7 @@ elif page == "Decomposition & Stationarity":
     fig.add_trace(go.Scatter(x=daily.index, y=stl_result.resid, mode="markers",
                               marker=dict(size=3, color="#666")), row=4, col=1)
     style_fig(fig, height=680, showlegend=False)
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     st.caption("Trend shows a mild increase over the observation window; seasonal confirms the expected "
                "summer-peak / winter-trough annual cycle; residual captures weather-driven day-to-day noise.")
 
@@ -254,7 +252,7 @@ elif page == "Decomposition & Stationarity":
             fig2.add_hline(y=conf, line_dash="dot", line_color="gray", row=1, col=col)
             fig2.add_hline(y=-conf, line_dash="dot", line_color="gray", row=1, col=col)
         style_fig(fig2, height=380, showlegend=False)
-        st.plotly_chart(fig2, width="stretch")
+        st.plotly_chart(fig2, use_container_width=True)
 
 # ---------------------------------------------------------------------------
 # Page: Model Comparison
@@ -281,7 +279,7 @@ elif page == "Model Comparison":
                               marker_color=MODEL_COLORS["SARIMA"]))
     style_fig(bar_fig, height=380)
     bar_fig.update_layout(barmode="group", yaxis_title=metric_choice)
-    st.plotly_chart(bar_fig, width="stretch")
+    st.plotly_chart(bar_fig, use_container_width=True)
 
     st.subheader("Forecasts vs. Actual (Validation + Test Period)")
     fig = go.Figure()
@@ -294,7 +292,7 @@ elif page == "Model Comparison":
     fig.add_vline(x=split_boundary, line_dash="dash", line_color="gray")
     style_fig(fig)
     fig.update_layout(yaxis_title="Ozone (µg/m³)")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
     st.caption("Dashed line marks the validation/test boundary. MAPE is unstable on validation because "
                "several winter days have near-zero actual ozone; MAE/RMSE are the more reliable metrics.")
 
@@ -338,7 +336,7 @@ elif page == "Forecast Explorer":
                               name="XGBoost forecast", line=dict(color=MODEL_COLORS["XGBoost"], width=2)))
     style_fig(fig, height=460)
     fig.update_layout(yaxis_title="Ozone (µg/m³)")
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
     st.caption(
         "These are genuine out-of-sample projections beyond the last observed date "
