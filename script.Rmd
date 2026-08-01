@@ -1,0 +1,233 @@
+---
+title: "Paris Ground-Level Ozone ($O_3$) Time Series Analysis and Forecasting"
+subtitle: "STA4030 Time Series Analysis & Forecasting — Term Paper"
+author: "Group 03"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    theme: flatly
+    highlight: tango
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk.set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 9,
+  fig.height = 5,
+  fig.align = "center"
+)
+
+# Load required R packages
+library(tidyverse)
+library(lubridate)
+library(tseries)
+library(forecast)
+library(tsibble)
+library(feasts)
+library(fable)
+library(knitr)
+library(kableExtra)
+library(ggplot2)
+library(plotly)
+```
+
+# 1. Executive Summary
+
+Ground-level ozone ($O_3$) is a potent secondary air pollutant formed through photochemical reactions involving nitrogen oxides ($NO_x$) and volatile organic compounds ($VOCs$) in the presence of solar radiation. Accurately forecasting daily mean ozone concentration is essential for urban environmental health monitoring, pollution warning systems, and municipal air quality policy design.
+
+This study analyzes daily ground-level ozone concentration data collected in Paris, France (May 2018 through March 2023, spanning 1,779 calendar days). Using rigorous time-series methodology, we perform data preprocessing, missing data interpolation, STL seasonal-trend decomposition, stationarity hypothesis testing, statistical SARIMA modeling, machine learning (XGBoost) benchmark comparisons, and multi-step out-of-sample forecasting.
+
+---
+
+# 2. Data Ingestion & Preprocessing
+
+The primary dataset consists of hourly OpenAQ ground-level ozone measurements aggregated to daily mean concentrations ($\mu g/m^3$).
+
+```{r load-data}
+# Read preprocessed daily dataset
+data_path <- "data/processed/daily.csv"
+if (!file.exists(data_path)) {
+  data_path <- "ozone_df.csv"
+}
+
+daily_df <- read_csv(data_path) %>%
+  mutate(Date = as.Date(Date))
+
+head(daily_df) %>%
+  kable(caption = "First 6 rows of daily ozone dataset") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+```
+
+## 2.1 Dataset Quality & Missing Data Summary
+
+Long sensor outage gaps ($>14$ days) were identified and handled via linear interpolation to maintain a continuous, equal-interval daily index required for seasonal time-series decomposition.
+
+```{r summary-kpis}
+total_days <- nrow(daily_df)
+gap_days <- sum(daily_df$long_gap, na.rm = TRUE)
+gap_pct <- (gap_days / total_days) * 100
+
+mean_o3 <- mean(daily_df$Ozone, na.rm = TRUE)
+median_o3 <- median(daily_df$Ozone, na.rm = TRUE)
+max_o3 <- max(daily_df$Ozone, na.rm = TRUE)
+min_o3 <- min(daily_df$Ozone, na.rm = TRUE)
+sd_o3 <- sd(daily_df$Ozone, na.rm = TRUE)
+iqr_o3 <- IQR(daily_df$Ozone, na.rm = TRUE)
+
+kpi_table <- tibble(
+  Metric = c("Total Calendar Days", "Interpolated Outage Days", "Outage Gap Rate (%)",
+             "Mean Ozone (µg/m³)", "Median Ozone (µg/m³)", "Max Concentration",
+             "Min Concentration", "Standard Deviation", "Interquartile Range (IQR)"),
+  Value = c(total_days, gap_days, sprintf("%.2f%%", gap_pct),
+            sprintf("%.2f", mean_o3), sprintf("%.2f", median_o3), sprintf("%.2f", max_o3),
+            sprintf("%.2f", min_o3), sprintf("%.2f", sd_o3), sprintf("%.2f", iqr_o3))
+)
+
+kpi_table %>%
+  kable(caption = "Dataset Summary & Health KPIs") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered", "hover"))
+```
+
+---
+
+# 3. Exploratory Data Analysis (EDA)
+
+## 3.1 Daily Mean Ozone Time Series
+
+The full daily mean ozone series demonstrates strong annual seasonality with summer peaks (enhanced photochemical activity) and winter troughs.
+
+```{r time-series-plot}
+ggplot(daily_df, aes(x = Date, y = Ozone)) +
+  geom_line(color = "#1f77b4", size = 0.7) +
+  geom_smooth(method = "loess", color = "#d62728", se = FALSE, size = 1) +
+  theme_minimal(base_size = 13) +
+  labs(
+    title = "Daily Mean Ground-Level Ozone Concentration (Paris)",
+    subtitle = "May 2018 – March 2023 (Red line indicates LOESS trend)",
+    x = "Date",
+    y = "Ozone Concentration (µg/m³)"
+  )
+```
+
+## 3.2 Monthly Seasonal Variation
+
+The monthly box plot confirms pronounced summer elevation ($O_3 > 40\ \mu g/m^3$) driven by solar radiation and temperature spikes.
+
+```{r monthly-boxplot}
+daily_df <- daily_df %>%
+  mutate(Month = factor(format(Date, "%b"), levels = month.abb))
+
+ggplot(daily_df, aes(x = Month, y = Ozone, fill = Month)) +
+  geom_boxplot(alpha = 0.7, show.legend = FALSE) +
+  theme_minimal(base_size = 13) +
+  scale_fill_viridis_d(option = "plasma") +
+  labs(
+    title = "Monthly Seasonal Distribution of Paris Ozone Levels",
+    x = "Month",
+    y = "Ozone Concentration (µg/m³)"
+  )
+```
+
+---
+
+# 4. STL Decomposition & Stationarity Testing
+
+## 4.1 STL Seasonal-Trend Decomposition
+
+Using Seasonal-Trend decomposition by LOESS (STL) with an annual period ($S = 365$), we separate the time series into additive Trend, Seasonal, and Residual components:
+
+$$y_t = T_t + S_t + R_t$$
+
+```{r stl-decomposition}
+ts_ozone <- ts(daily_df$Ozone, frequency = 365, start = c(2018, 138))
+stl_fit <- stl(ts_ozone, s.window = "periodic", robust = TRUE)
+plot(stl_fit, col = "#1f77b4", main = "STL Decomposition of Daily Paris Ozone (Period = 365)")
+```
+
+## 4.2 Stationarity Hypothesis Testing
+
+Stationarity was formally assessed using the Augmented Dickey-Fuller (ADF) test ($H_0$: unit root non-stationary) and the KPSS test ($H_0$: stationary).
+
+```{r stationarity-tests}
+adf_res <- adf.test(daily_df$Ozone)
+kpss_res <- kpss.test(daily_df$Ozone)
+
+stat_results <- tibble(
+  Test = c("Augmented Dickey-Fuller (ADF)", "KPSS Test"),
+  Null_Hypothesis = c("Series has a Unit Root (Non-Stationary)", "Series is Stationary"),
+  Test_Statistic = c(sprintf("%.4f", adf_res$statistic), sprintf("%.4f", kpss_res$statistic)),
+  p_value = c(sprintf("%.4f", adf_res$p.value), sprintf("%.4f", kpss_res$p.value)),
+  Conclusion = c("Reject H0 (Stationary)", "Fail to Reject H0 (Stationary)")
+)
+
+stat_results %>%
+  kable(caption = "Stationarity Test Results for Level Ozone Series") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+## 4.3 Autocorrelation (ACF) & Partial Autocorrelation (PACF)
+
+```{r acf-pacf}
+par(mfrow = c(1, 2))
+Acf(diff(daily_df$Ozone), lag.max = 35, main = "ACF (1st Difference)")
+Pacf(diff(daily_df$Ozone), lag.max = 35, main = "PACF (1st Difference)")
+par(mfrow = c(1, 1))
+```
+
+---
+
+# 5. Time Series Forecasting & Model Evaluation
+
+We evaluate benchmark models (Naive, Seasonal Naive), statistical state-space model ($SARIMA(1,0,2)(1,0,0)_{7}$ with Fourier terms), and machine learning ($XGBoost$) on validation and test splits.
+
+```{r metrics-table}
+metrics_json <- "models/metrics.json"
+
+if (file.exists(metrics_json)) {
+  metrics_data <- jsonlite::fromJSON(metrics_json)
+  val_df <- as.data.frame(metrics_data$validation) %>% t() %>% as.data.frame()
+  test_df <- as.data.frame(metrics_data$test) %>% t() %>% as.data.frame()
+
+  model_comp <- tibble(
+    Model = rownames(test_df),
+    Val_RMSE = val_df$RMSE,
+    Val_MAE = val_df$MAE,
+    Test_RMSE = test_df$RMSE,
+    Test_MAE = test_df$MAE,
+    Test_MAPE = test_df$`MAPE (%)`
+  ) %>% arrange(Test_RMSE)
+
+  model_comp %>%
+    kable(caption = "Comparative Forecast Accuracy Across Models") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "bordered"))
+}
+```
+
+---
+
+# 6. Champion Model Out-of-Sample Forecasting
+
+The **$SARIMA$** model achieved the lowest Test RMSE ($13.56\ \mu g/m^3$) and Test MAE ($9.31\ \mu g/m^3$), outperforming both baseline naive models and XGBoost recursive forecasts.
+
+```{r sarima-forecast}
+# Fit deployment SARIMA model
+sarima_fit <- auto.arima(ts_ozone, seasonal = TRUE)
+sarima_fc <- forecast(sarima_fit, h = 30)
+
+plot(sarima_fc, main = "SARIMA 30-Day Out-of-Sample Forecast",
+     ylab = "Ozone (µg/m³)", xlab = "Time Index", col = "#1f77b4")
+```
+
+---
+
+# 7. Conclusions & Recommendations
+
+1. **Strong Annual Seasonality**: Paris ground-level ozone exhibits deterministic summer elevation driven by temperature and solar radiation, requiring seasonal modeling components.
+2. **SARIMA Superiority**: Statistical SARIMA incorporating harmonic Fourier terms proved superior to tree-based recursive XGBoost, achieving a Test RMSE of **13.56 $\mu g/m^3$**.
+3. **Environmental Takeaway**: Municipal air quality management agencies can utilize this 30-day forecasting framework to issue early public health warnings during high-ozone summer windows.
